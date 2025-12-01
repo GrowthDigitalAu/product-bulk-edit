@@ -208,50 +208,29 @@ export default function ExportProductData() {
 
     return (
         <s-page heading="Export Product Data">
-            <s-layout>
-                <s-layout-section>
-                    <s-card>
-                        <s-block-stack gap="400">
-                            <s-text as="p" variant="bodyMd">
-                                Select a location to filter the export, or leave blank to export all locations.
-                            </s-text>
-
-                            <s-block-stack gap="200">
-                                <s-text as="label" variant="bodyMd" fontWeight="semibold">
-                                    Inventory Location (Optional)
-                                </s-text>
-                                <select
-                                    value={selectedLocation}
-                                    onChange={(e) => setSelectedLocation(e.target.value)}
-                                    style={{
-                                        padding: "8px 12px",
-                                        border: "1px solid #c9cccf",
-                                        borderRadius: "4px",
-                                        fontSize: "14px",
-                                        backgroundColor: "white",
-                                        cursor: "pointer"
-                                    }}
-                                >
-                                    <option value="">All Locations</option>
-                                    {locations.map((location) => (
-                                        <option key={location.id} value={location.id}>
-                                            {location.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </s-block-stack>
-
-                            <s-button
-                                variant="primary"
-                                onClick={handleExport}
-                                loading={isLoading ? "true" : undefined}
-                            >
-                                Export Product Data
-                            </s-button>
-                        </s-block-stack>
-                    </s-card>
-                </s-layout-section>
-            </s-layout>
+            <s-section heading='Select a location to filter the export, or "All Locations" to export all locations.'>
+                <s-select
+                    className="export-select-dropdown"
+                    label="Choose Location"
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                >
+                    <s-option value="">All Locations</s-option>
+                    {locations.map((location) => (
+                        <s-option key={location.id} value={location.id}>
+                            {location.name}
+                        </s-option>
+                    ))}
+                </s-select>
+                <s-button
+                    variant="primary"
+                    onClick={handleExport}
+                    loading={isLoading ? "true" : undefined}
+                    paddingBlock="large"
+                >
+                    Export Product Data
+                </s-button>
+            </s-section>
         </s-page>
     );
 }

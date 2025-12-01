@@ -3,6 +3,7 @@ import { useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
 import ExcelJS from "exceljs";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { Pagination } from "@shopify/polaris";
 
 export const loader = async ({ request }) => {
     const { admin } = await authenticate.admin(request);
@@ -265,6 +266,14 @@ export default function ImportProductData() {
     const [selectedLocation, setSelectedLocation] = useState("");
     const fileInputRef = useRef(null);
 
+    // Pagination state for Failed Rows
+    const [failedPage, setFailedPage] = useState(1);
+    const failedRowsPerPage = 10;
+
+    // Pagination state for Skipped Rows
+    const [skippedPage, setSkippedPage] = useState(1);
+    const skippedRowsPerPage = 10;
+
     const isLoading = fetcher.state === "submitting" || fetcher.state === "loading";
     const locations = loaderFetcher.data?.locations || [];
 
@@ -277,6 +286,8 @@ export default function ImportProductData() {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
             setFile(selectedFile);
+            setFailedPage(1);
+            setSkippedPage(1);
 
             // Parse the Excel file using ExcelJS
             const reader = new FileReader();
@@ -357,161 +368,125 @@ export default function ImportProductData() {
 
     return (
         <s-page heading="Import Product Data">
-            <s-layout>
-                <s-layout-section>
-                    <s-card>
-                        <s-block-stack gap="400">
-                            <s-text as="p" variant="bodyMd">
-                                Select a location and upload an Excel file with SKU and Quantity Available columns.
-                            </s-text>
+            <s-section heading="Select a location and upload an Excel file with SKU and Quantity Available columns.">
+                <s-select
+                    label="Inventory Location (Required)"
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
+                >
+                    <s-option value="">Select a location...</s-option>
+                    <s-option value="ALL_LOCATIONS">All Locations</s-option>
+                    {locations.map((location) => (
+                        <s-option key={location.id} value={location.id}>
+                            {location.name}
+                        </s-option>
+                    ))}
+                </s-select>
 
-                            <s-block-stack gap="200">
-                                <s-text as="label" variant="bodyMd" fontWeight="semibold">
-                                    Inventory Location (Required)
-                                </s-text>
-                                <select
-                                    value={selectedLocation}
-                                    onChange={(e) => setSelectedLocation(e.target.value)}
-                                    style={{
-                                        padding: "8px 12px",
-                                        border: "1px solid #c9cccf",
-                                        borderRadius: "4px",
-                                        fontSize: "14px",
-                                        backgroundColor: "white",
-                                        cursor: "pointer"
-                                    }}
-                                >
-                                    <option value="">Select a location...</option>
-                                    <option value="ALL_LOCATIONS">All Locations</option>
-                                    {locations.map((location) => (
-                                        <option key={location.id} value={location.id}>
-                                            {location.name}
-                                        </option>
+                {/* Hidden file input */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                />
+
+
+                <s-button
+                    variant="primary"
+                    onClick={handleButtonClick}
+                    loading={isLoading ? "true" : undefined}
+                    disabled={!selectedLocation}
+                    paddingBlock="large"
+                >
+                    Import Products
+                </s-button>
+            </s-section>
+
+            {!isLoading && fetcher.data?.results && (
+                <>
+                    <s-section heading="Import Results">
+                        <s-stack gap="200" direction="block">
+                            <s-text as="p">Total rows: {fetcher.data.results.total}</s-text>
+                            <s-text as="p">Successfully updated: {fetcher.data.results.updated}</s-text>
+                            <s-text as="p">Skipped: {fetcher.data.results.skippedRows?.length || 0}</s-text>
+                            <s-text as="p">Errors: {fetcher.data.results.errors.length}</s-text>
+                        </s-stack>
+                    </s-section>
+
+                    {fetcher.data.results.failedRows?.length > 0 && (
+                        <s-section heading={`❌ Failed Rows (${fetcher.data.results.failedRows.length})`}>
+                            <s-table>
+                                <s-table-header-row>
+                                    {Object.keys(fetcher.data.results.failedRows[0] || {}).map((key) => (
+                                        <s-table-header key={key}>{key}</s-table-header>
                                     ))}
-                                </select>
-                            </s-block-stack>
-
-                            {/* Hidden file input */}
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".xlsx,.xls"
-                                onChange={handleFileChange}
-                                style={{ display: 'none' }}
-                            />
-
-                            <s-button
-                                variant="primary"
-                                onClick={handleButtonClick}
-                                loading={isLoading ? "true" : undefined}
-                                disabled={!selectedLocation}
-                            >
-                                Import Products
-                            </s-button>
-
-                            {fetcher.data?.results && (
-                                <s-card>
-                                    <s-block-stack gap="300">
-                                        <s-text as="h3" variant="headingSm">Import Results</s-text>
-                                        <s-text as="p">Total rows: {fetcher.data.results.total}</s-text>
-                                        <s-text as="p">Successfully updated: {fetcher.data.results.updated}</s-text>
-                                        <s-text as="p">Skipped: {fetcher.data.results.skippedRows?.length || 0}</s-text>
-                                        <s-text as="p">Errors: {fetcher.data.results.errors.length}</s-text>
-
-                                        {fetcher.data.results.failedRows?.length > 0 && (
-                                            <s-block-stack gap="200">
-                                                <s-text as="p" variant="bodyMd" fontWeight="semibold" tone="critical">
-                                                    ❌ Failed Rows ({fetcher.data.results.failedRows.length}):
-                                                </s-text>
-                                                <div style={{ overflowX: 'auto' }}>
-                                                    <table style={{
-                                                        width: '100%',
-                                                        borderCollapse: 'collapse',
-                                                        fontSize: '13px'
-                                                    }}>
-                                                        <thead>
-                                                            <tr style={{ backgroundColor: '#f6f6f7', borderBottom: '1px solid #e1e3e5' }}>
-                                                                {Object.keys(fetcher.data.results.failedRows[0] || {}).map((key) => (
-                                                                    <th key={key} style={{
-                                                                        padding: '12px 16px',
-                                                                        textAlign: 'left',
-                                                                        fontWeight: '600',
-                                                                        color: '#202223'
-                                                                    }}>
-                                                                        {key}
-                                                                    </th>
-                                                                ))}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {fetcher.data.results.failedRows.map((row, index) => (
-                                                                <tr key={index} style={{ borderBottom: '1px solid #e1e3e5' }}>
-                                                                    {Object.entries(row).map(([key, value], cellIndex) => (
-                                                                        <td key={cellIndex} style={{
-                                                                            padding: '12px 16px',
-                                                                            color: key === 'errorReason' ? '#d72c0d' : '#202223'
-                                                                        }}>
-                                                                            {value?.toString() || '-'}
-                                                                        </td>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </s-block-stack>
-                                        )}
-
-                                        {fetcher.data.results.skippedRows?.length > 0 && (
-                                            <s-block-stack gap="200">
-                                                <s-text as="p" variant="bodyMd" fontWeight="semibold" tone="info">
-                                                    ⏭️ Skipped Rows ({fetcher.data.results.skippedRows.length}) - Quantity Already Matches:
-                                                </s-text>
-                                                <div style={{ overflowX: 'auto' }}>
-                                                    <table style={{
-                                                        width: '100%',
-                                                        borderCollapse: 'collapse',
-                                                        fontSize: '13px'
-                                                    }}>
-                                                        <thead>
-                                                            <tr style={{ backgroundColor: '#f6f6f7', borderBottom: '1px solid #e1e3e5' }}>
-                                                                {Object.keys(fetcher.data.results.skippedRows[0] || {}).map((key) => (
-                                                                    <th key={key} style={{
-                                                                        padding: '12px 16px',
-                                                                        textAlign: 'left',
-                                                                        fontWeight: '600',
-                                                                        color: '#202223'
-                                                                    }}>
-                                                                        {key}
-                                                                    </th>
-                                                                ))}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {fetcher.data.results.skippedRows.map((row, index) => (
-                                                                <tr key={index} style={{ borderBottom: '1px solid #e1e3e5' }}>
-                                                                    {Object.entries(row).map(([key, value], cellIndex) => (
-                                                                        <td key={cellIndex} style={{
-                                                                            padding: '12px 16px',
-                                                                            color: key === 'reason' ? '#0a7ea4' : '#202223'
-                                                                        }}>
-                                                                            {value?.toString() || '-'}
-                                                                        </td>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </s-block-stack>
-                                        )}
-                                    </s-block-stack>
-                                </s-card>
+                                </s-table-header-row>
+                                <s-table-body>
+                                    {fetcher.data.results.failedRows
+                                        .slice((failedPage - 1) * failedRowsPerPage, failedPage * failedRowsPerPage)
+                                        .map((row, index) => (
+                                            <s-table-row key={index}>
+                                                {Object.keys(fetcher.data.results.failedRows[0] || {}).map((key, cellIndex) => (
+                                                    <s-table-cell key={cellIndex}>
+                                                        {row[key]?.toString() || '-'}
+                                                    </s-table-cell>
+                                                ))}
+                                            </s-table-row>
+                                        ))}
+                                </s-table-body>
+                            </s-table>
+                            {fetcher.data.results.failedRows.length > failedRowsPerPage && (
+                                <Pagination
+                                    hasPrevious={failedPage > 1}
+                                    onPrevious={() => setFailedPage(failedPage - 1)}
+                                    hasNext={failedPage < Math.ceil(fetcher.data.results.failedRows.length / failedRowsPerPage)}
+                                    onNext={() => setFailedPage(failedPage + 1)}
+                                    type="table"
+                                    label={`${((failedPage - 1) * failedRowsPerPage) + 1}-${Math.min(failedPage * failedRowsPerPage, fetcher.data.results.failedRows.length)} of ${fetcher.data.results.failedRows.length}`}
+                                />
                             )}
-                        </s-block-stack>
-                    </s-card>
-                </s-layout-section>
-            </s-layout>
+                        </s-section>
+                    )}
+
+                    {fetcher.data.results.skippedRows?.length > 0 && (
+                        <s-section heading={`⏭️ Skipped Rows (${fetcher.data.results.skippedRows.length}) - Quantity Already Matches`}>
+                            <s-table>
+                                <s-table-header-row>
+                                    {Object.keys(fetcher.data.results.skippedRows[0] || {}).map((key) => (
+                                        <s-table-header key={key}>{key}</s-table-header>
+                                    ))}
+                                </s-table-header-row>
+                                <s-table-body>
+                                    {fetcher.data.results.skippedRows
+                                        .slice((skippedPage - 1) * skippedRowsPerPage, skippedPage * skippedRowsPerPage)
+                                        .map((row, index) => (
+                                            <s-table-row key={index}>
+                                                {Object.keys(fetcher.data.results.skippedRows[0] || {}).map((key, cellIndex) => (
+                                                    <s-table-cell key={cellIndex}>
+                                                        {row[key]?.toString() || '-'}
+                                                    </s-table-cell>
+                                                ))}
+                                            </s-table-row>
+                                        ))}
+                                </s-table-body>
+                            </s-table>
+                            {fetcher.data.results.skippedRows.length > skippedRowsPerPage && (
+                                <Pagination
+                                    hasPrevious={skippedPage > 1}
+                                    onPrevious={() => setSkippedPage(skippedPage - 1)}
+                                    hasNext={skippedPage < Math.ceil(fetcher.data.results.skippedRows.length / skippedRowsPerPage)}
+                                    onNext={() => setSkippedPage(skippedPage + 1)}
+                                    type="table"
+                                    label={`${((skippedPage - 1) * skippedRowsPerPage) + 1}-${Math.min(skippedPage * skippedRowsPerPage, fetcher.data.results.skippedRows.length)} of ${fetcher.data.results.skippedRows.length}`}
+                                />
+                            )}
+                        </s-section>
+                    )}
+                </>
+            )
+            }
         </s-page>
     );
 }

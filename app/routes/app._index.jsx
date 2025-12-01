@@ -1,5 +1,4 @@
 import { authenticate } from "../shopify.server";
-import { Page, Layout, Card, BlockStack, Text } from "@shopify/polaris";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -8,18 +7,18 @@ export const loader = async ({ request }) => {
 
 export default function Index() {
   return (
-    <Page title="Welcome to Product Bulk Edit">
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="400">
-              <Text as="h1" variant="headingLg">
+    <s-page heading="Welcome to Product Bulk Edit">
+      <s-layout>
+        <s-layout-section>
+          <s-card>
+            <s-block-stack gap="400">
+              <s-text as="h1" variant="headingLg">
                 Use the sidebar to access Import and Export features.
-              </Text>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+              </s-text>
+            </s-block-stack>
+          </s-card>
+        </s-layout-section>
+      </s-layout>
+    </s-page>
   );
 }
