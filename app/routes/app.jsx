@@ -24,9 +24,9 @@ export default function App() {
       <NavMenu>
         <a href="/app" rel="home">Home</a>
         <a href="/app/products">Get Products</a>
-        <a href="/app/import-product-data">Import product Data</a>
-        <a href="/app/export-product-data">Export product Data</a>
-        <a href="/app/additional">Additional page</a>
+        <a href="/app/import-product-data">Import product Inventory Data</a>
+        <a href="/app/export-product-data">Export product Inventory Data</a>
+        <a href="/app/settings">Settings</a>
       </NavMenu>
       <PolarisAppProvider i18n={enTranslations}>
         <Outlet />

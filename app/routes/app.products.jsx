@@ -116,64 +116,66 @@ export default function ProductsPage() {
     }
 
     return (
-        <s-page heading="Products" className="products-page">
-            <s-section padding="none">
-                <s-table className="products-table">
-                    <s-table-header-row>
-                        <s-table-header>Image</s-table-header>
-                        <s-table-header>Title</s-table-header>
-                        <s-table-header>Status</s-table-header>
-                        <s-table-header format="numeric">Inventory</s-table-header>
-                        <s-table-header format="numeric">Price</s-table-header>
-                    </s-table-header-row>
-                    <s-table-body>
-                        {products.map((product) => (
-                            <s-table-row key={product.id}>
-                                <s-table-cell>
-                                    <img
-                                        src={product.featuredImage?.url || "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-image_large.png"}
-                                        alt={product.featuredImage?.altText || product.title}
-                                        style={{
-                                            width: "50px",
-                                            height: "50px",
-                                            objectFit: "cover",
-                                            borderRadius: "8px",
-                                            border: "1px solid #e1e3e5",
-                                            backgroundColor: "#f6f6f7"
-                                        }}
-                                    />
-                                </s-table-cell>
-                                <s-table-cell>
-                                    <s-text fontWeight="semibold">{product.title}</s-text>
-                                </s-table-cell>
-                                <s-table-cell>
-                                    <s-badge tone={product.status === "ACTIVE" ? "success" : "info"}>
-                                        {product.status}
-                                    </s-badge>
-                                </s-table-cell>
-                                <s-table-cell>
-                                    <s-text tone="subdued">{product.totalInventory} in stock</s-text>
-                                </s-table-cell>
-                                <s-table-cell>
-                                    <s-text fontWeight="semibold">
-                                        ${product.variants.edges[0]?.node.price}
-                                    </s-text>
-                                </s-table-cell>
-                            </s-table-row>
-                        ))}
-                    </s-table-body>
-                </s-table>
-                <div className="table-pagination">
-                    <Pagination
-                        hasPrevious={pageInfo.hasPreviousPage}
-                        onPrevious={() => handlePagination("previous", pageInfo.startCursor)}
-                        hasNext={pageInfo.hasNextPage}
-                        onNext={() => handlePagination("next", pageInfo.endCursor)}
-                        type="table"
-                        label={paginationLabel}
-                    />
-                </div>
-            </s-section>
+        <s-page heading="Get Products" className="products-page">
+            <s-box paddingBlockStart="large" paddingBlockEnd="large">
+                <s-section padding="none">
+                    <s-table className="products-table">
+                        <s-table-header-row>
+                            <s-table-header>Image</s-table-header>
+                            <s-table-header>Title</s-table-header>
+                            <s-table-header>Status</s-table-header>
+                            <s-table-header format="numeric">Inventory</s-table-header>
+                            <s-table-header format="numeric">Price</s-table-header>
+                        </s-table-header-row>
+                        <s-table-body>
+                            {products.map((product) => (
+                                <s-table-row key={product.id}>
+                                    <s-table-cell>
+                                        <img
+                                            src={product.featuredImage?.url || "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-image_large.png"}
+                                            alt={product.featuredImage?.altText || product.title}
+                                            style={{
+                                                width: "50px",
+                                                height: "50px",
+                                                objectFit: "cover",
+                                                borderRadius: "8px",
+                                                border: "1px solid #e1e3e5",
+                                                backgroundColor: "#f6f6f7"
+                                            }}
+                                        />
+                                    </s-table-cell>
+                                    <s-table-cell>
+                                        <s-text fontWeight="semibold">{product.title}</s-text>
+                                    </s-table-cell>
+                                    <s-table-cell>
+                                        <s-badge tone={product.status === "ACTIVE" ? "success" : "info"}>
+                                            {product.status}
+                                        </s-badge>
+                                    </s-table-cell>
+                                    <s-table-cell>
+                                        <s-text tone="subdued">{product.totalInventory} in stock</s-text>
+                                    </s-table-cell>
+                                    <s-table-cell>
+                                        <s-text fontWeight="semibold">
+                                            ${product.variants.edges[0]?.node.price}
+                                        </s-text>
+                                    </s-table-cell>
+                                </s-table-row>
+                            ))}
+                        </s-table-body>
+                    </s-table>
+                    <div className="table-pagination">
+                        <Pagination
+                            hasPrevious={pageInfo.hasPreviousPage}
+                            onPrevious={() => handlePagination("previous", pageInfo.startCursor)}
+                            hasNext={pageInfo.hasNextPage}
+                            onNext={() => handlePagination("next", pageInfo.endCursor)}
+                            type="table"
+                            label={paginationLabel}
+                        />
+                    </div>
+                </s-section>
+            </s-box>
         </s-page>
     );
 }

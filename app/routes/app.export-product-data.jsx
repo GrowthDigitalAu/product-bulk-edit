@@ -208,29 +208,31 @@ export default function ExportProductData() {
 
     return (
         <s-page heading="Export Product Inventory Data">
-            <s-section heading='Select a location to filter the export, or "All Locations" to export all locations.'>
-                <s-select
-                    className="export-select-dropdown"
-                    label="Choose Location"
-                    value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
-                >
-                    <s-option value="">All Locations</s-option>
-                    {locations.map((location) => (
-                        <s-option key={location.id} value={location.id}>
-                            {location.name}
-                        </s-option>
-                    ))}
-                </s-select>
-                <s-button
-                    variant="primary"
-                    onClick={handleExport}
-                    loading={isLoading ? "true" : undefined}
-                    paddingBlock="large"
-                >
-                    Export Product Data
-                </s-button>
-            </s-section>
+            <s-box paddingBlockStart="large" paddingBlockEnd="large">
+                <s-section heading='Select a location to filter the export, or "All Locations" to export all locations.'>
+                    <s-select
+                        className="export-select-dropdown"
+                        label="Choose Location"
+                        value={selectedLocation}
+                        onChange={(e) => setSelectedLocation(e.target.value)}
+                    >
+                        <s-option value="">All Locations</s-option>
+                        {locations.map((location) => (
+                            <s-option key={location.id} value={location.id}>
+                                {location.name}
+                            </s-option>
+                        ))}
+                    </s-select>
+                    <s-button
+                        variant="primary"
+                        onClick={handleExport}
+                        loading={isLoading ? "true" : undefined}
+                        paddingBlock="large"
+                    >
+                        Export Product Data
+                    </s-button>
+                </s-section>
+            </s-box>
         </s-page>
     );
 }

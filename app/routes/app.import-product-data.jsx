@@ -285,7 +285,7 @@ export default function ImportProductData() {
     const loaderFetcher = useFetcher();
     const [file, setFile] = useState(null);
     const [parsedData, setParsedData] = useState(null);
-    const [selectedLocation, setSelectedLocation] = useState("");
+    const [selectedLocation, setSelectedLocation] = useState("ALL_LOCATIONS");
     const [progress, setProgress] = useState(0);
     const [isProgressVisible, setIsProgressVisible] = useState(false);
     const fileInputRef = useRef(null);
@@ -439,39 +439,41 @@ export default function ImportProductData() {
 
     return (
         <s-page heading="Import Product Inventory Data">
-            <s-section heading="Select a location and upload an Excel file with SKU, Quantity Available and Inventory Location columns. Other columns are optional.">
-                <s-select
-                    label="Choose Location"
-                    value={selectedLocation}
-                    onChange={(e) => setSelectedLocation(e.target.value)}
-                >
-                    <s-option value="">Select a location...</s-option>
-                    <s-option value="ALL_LOCATIONS">All Locations</s-option>
-                    {locations.map((location) => (
-                        <s-option key={location.id} value={location.id}>
-                            {location.name}
-                        </s-option>
-                    ))}
-                </s-select>
+            <s-box paddingBlockStart="large">
+                <s-section
+                    heading="Select a location and upload an Excel file with SKU, Quantity Available and Inventory Location columns. Other columns are optional.">
+                    <s-select
+                        label="Choose Location"
+                        value={selectedLocation}
+                        onChange={(e) => setSelectedLocation(e.target.value)}
+                    >
+                        <s-option value="ALL_LOCATIONS">All Locations</s-option>
+                        {locations.map((location) => (
+                            <s-option key={location.id} value={location.id}>
+                                {location.name}
+                            </s-option>
+                        ))}
+                    </s-select>
 
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                />
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleFileChange}
+                        style={{ display: 'none' }}
+                    />
 
-                <s-button
-                    variant="primary"
-                    onClick={handleButtonClick}
-                    loading={isLoading ? "true" : undefined}
-                    disabled={!selectedLocation}
-                    paddingBlock="large"
-                >
-                    Import Products
-                </s-button>
-            </s-section>
+                    <s-button
+                        variant="primary"
+                        onClick={handleButtonClick}
+                        loading={isLoading ? "true" : undefined}
+                        disabled={!selectedLocation ? "disabled" : undefined}
+                        paddingBlock="large"
+                    >
+                        Import Products
+                    </s-button>
+                </s-section>
+            </s-box>
 
             {isProgressVisible && (
                 <div style={{
@@ -498,87 +500,92 @@ export default function ImportProductData() {
 
             {!isLoading && fetcher.data?.results && !isProgressVisible && (
                 <>
-                    <s-section heading="Import Results">
-                        <s-stack gap="200" direction="block">
-                            <s-text as="p">Total rows: {fetcher.data.results.total}</s-text>
-                            <s-text as="p">Successfully updated: {fetcher.data.results.updated}</s-text>
-                            <s-text as="p">Skipped: {fetcher.data.results.skippedRows?.length || 0}</s-text>
-                            <s-text as="p">Errors: {fetcher.data.results.errors.length}</s-text>
-                        </s-stack>
-                    </s-section>
+                    <s-box paddingBlockStart="large">
+                        <s-section heading="Import Results">
+                            <s-stack gap="200" direction="block">
+                                <s-text as="p">Total rows: {fetcher.data.results.total}</s-text>
+                                <s-text as="p">Successfully updated: {fetcher.data.results.updated}</s-text>
+                                <s-text as="p">Skipped: {fetcher.data.results.skippedRows?.length || 0}</s-text>
+                                <s-text as="p">Errors: {fetcher.data.results.errors.length}</s-text>
+                            </s-stack>
+                        </s-section>
+                    </s-box>
 
                     {fetcher.data.results.failedRows?.length > 0 && (
-                        <s-section heading={`❌ Failed Rows (${fetcher.data.results.failedRows.length})`}>
-                            <s-table>
-                                <s-table-header-row>
-                                    {Object.keys(fetcher.data.results.failedRows[0] || {}).map((key) => (
-                                        <s-table-header key={key}>{key}</s-table-header>
-                                    ))}
-                                </s-table-header-row>
-                                <s-table-body>
-                                    {fetcher.data.results.failedRows
-                                        .slice((failedPage - 1) * failedRowsPerPage, failedPage * failedRowsPerPage)
-                                        .map((row, index) => (
-                                            <s-table-row key={index}>
-                                                {Object.keys(fetcher.data.results.failedRows[0] || {}).map((key, cellIndex) => (
-                                                    <s-table-cell key={cellIndex}>
-                                                        {row[key]?.toString() || '-'}
-                                                    </s-table-cell>
-                                                ))}
-                                            </s-table-row>
+                        <s-box paddingBlockStart="large">
+                            <s-section heading={`❌ Failed Rows (${fetcher.data.results.failedRows.length})`}>
+                                <s-table>
+                                    <s-table-header-row>
+                                        {Object.keys(fetcher.data.results.failedRows[0] || {}).map((key) => (
+                                            <s-table-header key={key}>{key}</s-table-header>
                                         ))}
-                                </s-table-body>
-                            </s-table>
-                            {fetcher.data.results.failedRows.length > failedRowsPerPage && (
-                                <Pagination
-                                    hasPrevious={failedPage > 1}
-                                    onPrevious={() => setFailedPage(failedPage - 1)}
-                                    hasNext={failedPage < Math.ceil(fetcher.data.results.failedRows.length / failedRowsPerPage)}
-                                    onNext={() => setFailedPage(failedPage + 1)}
-                                    type="table"
-                                    label={`${((failedPage - 1) * failedRowsPerPage) + 1}-${Math.min(failedPage * failedRowsPerPage, fetcher.data.results.failedRows.length)} of ${fetcher.data.results.failedRows.length}`}
-                                />
-                            )}
-                        </s-section>
+                                    </s-table-header-row>
+                                    <s-table-body>
+                                        {fetcher.data.results.failedRows
+                                            .slice((failedPage - 1) * failedRowsPerPage, failedPage * failedRowsPerPage)
+                                            .map((row, index) => (
+                                                <s-table-row key={index}>
+                                                    {Object.keys(fetcher.data.results.failedRows[0] || {}).map((key, cellIndex) => (
+                                                        <s-table-cell key={cellIndex}>
+                                                            {row[key]?.toString() || '-'}
+                                                        </s-table-cell>
+                                                    ))}
+                                                </s-table-row>
+                                            ))}
+                                    </s-table-body>
+                                </s-table>
+                                {fetcher.data.results.failedRows.length > failedRowsPerPage && (
+                                    <Pagination
+                                        hasPrevious={failedPage > 1}
+                                        onPrevious={() => setFailedPage(failedPage - 1)}
+                                        hasNext={failedPage < Math.ceil(fetcher.data.results.failedRows.length / failedRowsPerPage)}
+                                        onNext={() => setFailedPage(failedPage + 1)}
+                                        type="table"
+                                        label={`${((failedPage - 1) * failedRowsPerPage) + 1}-${Math.min(failedPage * failedRowsPerPage, fetcher.data.results.failedRows.length)} of ${fetcher.data.results.failedRows.length}`}
+                                    />
+                                )}
+                            </s-section>
+                        </s-box>
                     )}
 
                     {fetcher.data.results.skippedRows?.length > 0 && (
-                        <s-section heading={`⏭️ Skipped Rows (${fetcher.data.results.skippedRows.length}) - Quantity Already Matches`}>
-                            <s-table>
-                                <s-table-header-row>
-                                    {Object.keys(fetcher.data.results.skippedRows[0] || {}).map((key) => (
-                                        <s-table-header key={key}>{key}</s-table-header>
-                                    ))}
-                                </s-table-header-row>
-                                <s-table-body>
-                                    {fetcher.data.results.skippedRows
-                                        .slice((skippedPage - 1) * skippedRowsPerPage, skippedPage * skippedRowsPerPage)
-                                        .map((row, index) => (
-                                            <s-table-row key={index}>
-                                                {Object.keys(fetcher.data.results.skippedRows[0] || {}).map((key, cellIndex) => (
-                                                    <s-table-cell key={cellIndex}>
-                                                        {row[key]?.toString() || '-'}
-                                                    </s-table-cell>
-                                                ))}
-                                            </s-table-row>
+                        <s-box paddingBlockStart="large" paddingBlockEnd="large">
+                            <s-section heading={`⏭️ Skipped Rows (${fetcher.data.results.skippedRows.length}) - Quantity Already Matches`}>
+                                <s-table>
+                                    <s-table-header-row>
+                                        {Object.keys(fetcher.data.results.skippedRows[0] || {}).map((key) => (
+                                            <s-table-header key={key}>{key}</s-table-header>
                                         ))}
-                                </s-table-body>
-                            </s-table>
-                            {fetcher.data.results.skippedRows.length > skippedRowsPerPage && (
-                                <Pagination
-                                    hasPrevious={skippedPage > 1}
-                                    onPrevious={() => setSkippedPage(skippedPage - 1)}
-                                    hasNext={skippedPage < Math.ceil(fetcher.data.results.skippedRows.length / skippedRowsPerPage)}
-                                    onNext={() => setSkippedPage(skippedPage + 1)}
-                                    type="table"
-                                    label={`${((skippedPage - 1) * skippedRowsPerPage) + 1}-${Math.min(skippedPage * skippedRowsPerPage, fetcher.data.results.skippedRows.length)} of ${fetcher.data.results.skippedRows.length}`}
-                                />
-                            )}
-                        </s-section>
+                                    </s-table-header-row>
+                                    <s-table-body>
+                                        {fetcher.data.results.skippedRows
+                                            .slice((skippedPage - 1) * skippedRowsPerPage, skippedPage * skippedRowsPerPage)
+                                            .map((row, index) => (
+                                                <s-table-row key={index}>
+                                                    {Object.keys(fetcher.data.results.skippedRows[0] || {}).map((key, cellIndex) => (
+                                                        <s-table-cell key={cellIndex}>
+                                                            {row[key]?.toString() || '-'}
+                                                        </s-table-cell>
+                                                    ))}
+                                                </s-table-row>
+                                            ))}
+                                    </s-table-body>
+                                </s-table>
+                                {fetcher.data.results.skippedRows.length > skippedRowsPerPage && (
+                                    <Pagination
+                                        hasPrevious={skippedPage > 1}
+                                        onPrevious={() => setSkippedPage(skippedPage - 1)}
+                                        hasNext={skippedPage < Math.ceil(fetcher.data.results.skippedRows.length / skippedRowsPerPage)}
+                                        onNext={() => setSkippedPage(skippedPage + 1)}
+                                        type="table"
+                                        label={`${((skippedPage - 1) * skippedRowsPerPage) + 1}-${Math.min(skippedPage * skippedRowsPerPage, fetcher.data.results.skippedRows.length)} of ${fetcher.data.results.skippedRows.length}`}
+                                    />
+                                )}
+                            </s-section>
+                        </s-box>
                     )}
                 </>
-            )
-            }
+            )}
         </s-page>
     );
 }

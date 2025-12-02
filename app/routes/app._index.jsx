@@ -8,11 +8,13 @@ export const loader = async ({ request }) => {
 export default function Index() {
   return (
     <s-page heading="Welcome to Product Bulk Edit">
-      <s-section heading="Use the sidebar to access Import and Export features.">
-        <s-paragraph>
-          This app allows you to bulk edit your product inventory in your Shopify store.
-        </s-paragraph>
-      </s-section>
+      <s-box paddingBlockStart="large" paddingBlockEnd="large">
+        <s-section heading="Use the sidebar to access Import and Export features.">
+          <s-paragraph>
+            This app allows you to bulk edit your product inventory in your Shopify store.
+          </s-paragraph>
+        </s-section>
+      </s-box>
     </s-page>
   );
 }
