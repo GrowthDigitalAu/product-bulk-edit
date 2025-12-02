@@ -92,6 +92,9 @@ export const action = async ({ request }) => {
         selectedLocationName = locationResult.data?.location?.name;
     }
 
+    // Track processed SKU+Location combinations to detect duplicates
+    const processedCombinations = new Set();
+
     // Process each row
     for (const row of rows) {
         try {
@@ -107,42 +110,52 @@ export const action = async ({ request }) => {
             const quantity = parseInt(quantityRaw);
             if (isNaN(quantity) || quantity === null || quantity === undefined) {
                 results.errors.push(`Skipped SKU ${sku}: Invalid or missing quantity value`);
-                results.failedRows.push({ ...row, errorReason: 'Invalid or missing quantity value' });
+                results.failedRows.push({ ...row, "Error Reason": 'Invalid or missing quantity value' });
                 continue;
             }
 
-            const sheetLocation = row["Inventory Location"];
+            const sheetLocationRaw = row["Inventory Location"];
+            const sheetLocation = sheetLocationRaw ? String(sheetLocationRaw).trim() : "";
+
+            // Mandatory Location Check
+            if (!sheetLocation) {
+                results.errors.push(`Skipped SKU ${sku}: please add proper location`);
+                results.failedRows.push({ ...row, "Error Reason": 'please add proper location' });
+                continue;
+            }
 
             // Determine which location to use
             let targetLocationId = locationId;
             let targetLocationName = selectedLocationName;
 
             if (isAllLocationsMode) {
-                // In All Locations mode, location MUST be specified in sheet
-                if (!sheetLocation || sheetLocation.trim() === "") {
-                    results.errors.push(`Skipped SKU ${sku}: No location specified in sheet (required for All Locations mode)`);
-                    results.failedRows.push({ ...row, errorReason: 'No location specified in sheet' });
-                    continue;
-                }
-
-                // Find the location in our store
-                const foundLocation = allLocations.find(loc => loc.name === sheetLocation.trim());
+                // Find the location in our store (case-insensitive)
+                const foundLocation = allLocations.find(loc => loc.name.toLowerCase() === sheetLocation.toLowerCase());
                 if (!foundLocation) {
                     results.errors.push(`Skipped SKU ${sku}: Location '${sheetLocation}' not found in store`);
-                    results.failedRows.push({ ...row, errorReason: `Location '${sheetLocation}' not found in store` });
+                    results.failedRows.push({ ...row, "Error Reason": `Location '${sheetLocation}' not found in store` });
                     continue;
                 }
 
                 targetLocationId = foundLocation.id;
                 targetLocationName = foundLocation.name;
             } else {
-                // Single location mode - validate if location is specified in sheet
-                if (sheetLocation && sheetLocation.trim() !== "" && sheetLocation.trim() !== selectedLocationName) {
+                // Single location mode - validate if location matches (case-insensitive)
+                if (sheetLocation.toLowerCase() !== selectedLocationName.toLowerCase()) {
                     results.errors.push(`Skipped SKU ${sku}: Location in sheet '${sheetLocation}' does not match selected location '${selectedLocationName}'`);
-                    results.failedRows.push({ ...row, errorReason: `Location mismatch: '${sheetLocation}' ≠ '${selectedLocationName}'` });
+                    results.failedRows.push({ ...row, "Error Reason": `Location mismatch: '${sheetLocation}' ≠ '${selectedLocationName}'` });
                     continue;
                 }
             }
+
+            // Check for duplicate SKU+Location combination
+            const combinationKey = `${sku}|${targetLocationName}`;
+            if (processedCombinations.has(combinationKey)) {
+                results.errors.push(`Skipped SKU ${sku}: You have identical row having same SKU and location`);
+                results.failedRows.push({ ...row, "Error Reason": 'You have identical row having same SKU and location' });
+                continue;
+            }
+            processedCombinations.add(combinationKey);
 
             // Find variant by SKU
             const variantQuery = await admin.graphql(
@@ -155,7 +168,7 @@ export const action = async ({ request }) => {
                                 sku
                                 inventoryItem {
                                     id
-                                    inventoryLevels(first: 10) {
+                                    inventoryLevels(first: 50) {
                                         edges {
                                             node {
                                                 location {
@@ -185,24 +198,33 @@ export const action = async ({ request }) => {
 
             if (!variant) {
                 results.errors.push(`Variant not found for SKU: ${sku}`);
-                results.failedRows.push({ ...row, errorReason: 'Variant not found' });
+                results.failedRows.push({ ...row, "Error Reason": 'Variant not found' });
                 continue;
             }
 
             // Find current quantity at the target location
             let currentQuantity = 0;
+            let locationFound = false;
             const inventoryLevels = variant.inventoryItem.inventoryLevels?.edges || [];
             for (const level of inventoryLevels) {
                 if (level.node.location.id === targetLocationId) {
                     const availableQty = level.node.quantities.find(q => q.name === "available");
                     currentQuantity = availableQty?.quantity || 0;
+                    locationFound = true;
                     break;
                 }
             }
 
+            // Validate that the location exists for this SKU
+            if (!locationFound) {
+                results.errors.push(`Skipped SKU ${sku}: SKU don't have this location`);
+                results.failedRows.push({ ...row, "Error Reason": `SKU don't have this location` });
+                continue;
+            }
+
             // Skip if quantity is already the same
             if (currentQuantity === quantity) {
-                results.skippedRows.push({ ...row, reason: 'Quantity already matches' });
+                results.skippedRows.push({ ...row, "Reason": 'Quantity already matches' });
                 continue;
             }
 
@@ -243,14 +265,14 @@ export const action = async ({ request }) => {
             if (updateResult.data?.inventorySetQuantities?.userErrors?.length > 0) {
                 const errorMsg = updateResult.data.inventorySetQuantities.userErrors[0].message;
                 results.errors.push(`Error updating SKU ${sku}: ${errorMsg}`);
-                results.failedRows.push({ ...row, errorReason: errorMsg });
+                results.failedRows.push({ ...row, "Error Reason": errorMsg });
             } else {
                 results.updated++;
             }
 
         } catch (error) {
             results.errors.push(`Error processing SKU ${row["SKU"]}: ${error.message}`);
-            results.failedRows.push({ ...row, errorReason: error.message });
+            results.failedRows.push({ ...row, "Error Reason": error.message });
         }
     }
 
@@ -368,9 +390,9 @@ export default function ImportProductData() {
 
     return (
         <s-page heading="Import Product Data">
-            <s-section heading="Select a location and upload an Excel file with SKU and Quantity Available columns.">
+            <s-section heading="Select a location and upload an Excel file with SKU, Quantity Available and Inventory Location columns. Other columns are optional.">
                 <s-select
-                    label="Inventory Location (Required)"
+                    label="Choose Location"
                     value={selectedLocation}
                     onChange={(e) => setSelectedLocation(e.target.value)}
                 >
