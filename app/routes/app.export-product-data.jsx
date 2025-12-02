@@ -207,7 +207,7 @@ export default function ExportProductData() {
     }, [fetcher.data, fetcher.state, shopify]);
 
     return (
-        <s-page heading="Export Product Data">
+        <s-page heading="Export Product Inventory Data">
             <s-section heading='Select a location to filter the export, or "All Locations" to export all locations.'>
                 <s-select
                     className="export-select-dropdown"

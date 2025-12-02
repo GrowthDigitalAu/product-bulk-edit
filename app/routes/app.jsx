@@ -6,8 +6,9 @@ import { AppProvider as PolarisAppProvider } from "@shopify/polaris";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import enTranslations from "@shopify/polaris/locales/en.json";
 import { authenticate } from "../shopify.server";
+import customStyles from "../custom.css?url";
 
-export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
+export const links = () => [{ rel: "stylesheet", href: polarisStyles }, { rel: "stylesheet", href: customStyles }];
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);

@@ -3,7 +3,7 @@ import { useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
 import ExcelJS from "exceljs";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { Pagination } from "@shopify/polaris";
+import { Pagination, ProgressBar } from "@shopify/polaris";
 
 export const loader = async ({ request }) => {
     const { admin } = await authenticate.admin(request);
@@ -286,6 +286,8 @@ export default function ImportProductData() {
     const [file, setFile] = useState(null);
     const [parsedData, setParsedData] = useState(null);
     const [selectedLocation, setSelectedLocation] = useState("");
+    const [progress, setProgress] = useState(0);
+    const [isProgressVisible, setIsProgressVisible] = useState(false);
     const fileInputRef = useRef(null);
 
     // Pagination state for Failed Rows
@@ -303,6 +305,52 @@ export default function ImportProductData() {
         // Load locations on mount
         loaderFetcher.load("/app/import-product-data");
     }, []);
+
+    useEffect(() => {
+        if (isLoading) {
+            setIsProgressVisible(true);
+            setProgress(0);
+
+            const rowCount = parsedData ? parsedData.length : 0;
+            // Conservative estimate: 500ms per row, minimum 2 seconds
+            const estimatedTimeMs = Math.max(rowCount * 500, 2000);
+            const intervalMs = 100;
+
+            // Calculate increment to reach 90% in estimatedTimeMs
+            const totalSteps = estimatedTimeMs / intervalMs;
+            const linearIncrement = 90 / totalSteps;
+
+            const interval = setInterval(() => {
+                setProgress((prev) => {
+                    if (prev < 90) {
+                        // Phase 1: Linear
+                        return Math.min(prev + linearIncrement, 90);
+                    } else {
+                        // Phase 2: Asymptotic crawl to 99%
+                        const target = 99;
+                        const remaining = target - prev;
+                        // Move very slowly: 1% of remaining distance or 0.01 minimum
+                        return prev + Math.max(remaining * 0.01, 0.01);
+                    }
+                });
+            }, intervalMs);
+            return () => clearInterval(interval);
+        } else if (isProgressVisible && !isLoading) {
+            // When loading finishes, jump to 100%
+            setProgress(100);
+        }
+    }, [isLoading, isProgressVisible, parsedData]);
+
+    // Hide progress bar only after results are ready to display
+    useEffect(() => {
+        if (!isLoading && fetcher.data?.results && isProgressVisible) {
+            // Results are ready, hide progress bar after a brief moment
+            const timeout = setTimeout(() => {
+                setIsProgressVisible(false);
+            }, 300); // Brief delay to show 100% completion
+            return () => clearTimeout(timeout);
+        }
+    }, [isLoading, fetcher.data?.results, isProgressVisible]);
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
@@ -374,6 +422,7 @@ export default function ImportProductData() {
         }
     };
 
+
     useEffect(() => {
         if (fetcher.data?.success && fetcher.state === "idle") {
             const { results } = fetcher.data;
@@ -389,7 +438,7 @@ export default function ImportProductData() {
     }, [fetcher.data, fetcher.state, shopify]);
 
     return (
-        <s-page heading="Import Product Data">
+        <s-page heading="Import Product Inventory Data">
             <s-section heading="Select a location and upload an Excel file with SKU, Quantity Available and Inventory Location columns. Other columns are optional.">
                 <s-select
                     label="Choose Location"
@@ -405,7 +454,6 @@ export default function ImportProductData() {
                     ))}
                 </s-select>
 
-                {/* Hidden file input */}
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -413,7 +461,6 @@ export default function ImportProductData() {
                     onChange={handleFileChange}
                     style={{ display: 'none' }}
                 />
-
 
                 <s-button
                     variant="primary"
@@ -426,7 +473,30 @@ export default function ImportProductData() {
                 </s-button>
             </s-section>
 
-            {!isLoading && fetcher.data?.results && (
+            {isProgressVisible && (
+                <div style={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '16px',
+                    width: '300px'
+                }}>
+                    <div style={{ width: '100%' }}>
+                        <ProgressBar progress={progress} size="small" />
+                    </div>
+                    <s-text variant="bodyLg">Importing products...</s-text>
+                    <s-div className="ProcessMain">
+                        <s-text className="ProcessInner"></s-text>
+                    </s-div>
+                </div>
+            )}
+
+            {!isLoading && fetcher.data?.results && !isProgressVisible && (
                 <>
                     <s-section heading="Import Results">
                         <s-stack gap="200" direction="block">
