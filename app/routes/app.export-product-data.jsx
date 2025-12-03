@@ -4,11 +4,11 @@ import { authenticate } from "../shopify.server";
 import ExcelJS from "exceljs";
 import { useAppBridge } from "@shopify/app-bridge-react";
 
-// Export product data with location filtering
+
 export const loader = async ({ request }) => {
     const { admin } = await authenticate.admin(request);
 
-    // Fetch all locations including app-managed ones
+
     const response = await admin.graphql(
         `#graphql
         query getLocations {
@@ -107,13 +107,13 @@ export const action = async ({ request }) => {
 
             const inventoryEdges = variant.inventoryItem?.inventoryLevels?.edges || [];
 
-            // Filter by location if specified
+
             const filteredInventory = locationId
                 ? inventoryEdges.filter(edge => edge.node.location.id === locationId)
                 : inventoryEdges;
 
             if (filteredInventory.length === 0) {
-                // Only add row if no location filter, or if filtering and this variant has no inventory at that location
+
                 if (!locationId) {
                     rows.push({
                         "Product Title": product.title,
@@ -167,7 +167,7 @@ export default function ExportProductData() {
     const locations = loaderFetcher.data?.locations || [];
 
     useEffect(() => {
-        // Load locations on mount
+
         loaderFetcher.load("/app/export-product-data");
     }, []);
 
@@ -183,11 +183,11 @@ export default function ExportProductData() {
         if (fetcher.data?.success && fetcher.state === "idle") {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Products");
-            // Add header row
+
             worksheet.addRow(Object.keys(fetcher.data.rows[0] || {}));
-            // Add data rows
+
             fetcher.data.rows.forEach(row => worksheet.addRow(Object.values(row)));
-            // Generate buffer and trigger download
+
             workbook.xlsx.writeBuffer().then(buffer => {
                 const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
                 const url = URL.createObjectURL(blob);

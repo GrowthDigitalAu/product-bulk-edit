@@ -8,7 +8,7 @@ import { Pagination, ProgressBar } from "@shopify/polaris";
 export const loader = async ({ request }) => {
     const { admin } = await authenticate.admin(request);
 
-    // Fetch all locations including app-managed ones
+
     const response = await admin.graphql(
         `#graphql
         query getLocations {
@@ -50,10 +50,10 @@ export const action = async ({ request }) => {
         skippedRows: []
     };
 
-    // Check if "All Locations" mode is selected
+
     const isAllLocationsMode = locationId === "ALL_LOCATIONS";
 
-    // Fetch all locations if in All Locations mode
+
     let allLocations = [];
     if (isAllLocationsMode) {
         const locationsQuery = await admin.graphql(
@@ -76,7 +76,7 @@ export const action = async ({ request }) => {
         })) || [];
     }
 
-    // Fetch selected location name once (for single location mode)
+
     let selectedLocationName = null;
     if (!isAllLocationsMode) {
         const locationQuery = await admin.graphql(
@@ -92,13 +92,13 @@ export const action = async ({ request }) => {
         selectedLocationName = locationResult.data?.location?.name;
     }
 
-    // Track processed SKU+Location combinations to detect duplicates
+
     const processedCombinations = new Set();
 
-    // Process each row
+
     for (const row of rows) {
         try {
-            // Skip header or empty rows
+
             if (!row["SKU"] || row["SKU"] === "SKU") {
                 continue;
             }
@@ -106,7 +106,7 @@ export const action = async ({ request }) => {
             const sku = row["SKU"];
             const quantityRaw = row["Quantity Available"];
 
-            // Validate quantity - must be a valid number
+
             const quantity = parseInt(quantityRaw);
             if (isNaN(quantity) || quantity === null || quantity === undefined) {
                 results.errors.push(`Skipped SKU ${sku}: Invalid or missing quantity value`);
@@ -117,19 +117,19 @@ export const action = async ({ request }) => {
             const sheetLocationRaw = row["Inventory Location"];
             const sheetLocation = sheetLocationRaw ? String(sheetLocationRaw).trim() : "";
 
-            // Mandatory Location Check
+
             if (!sheetLocation) {
                 results.errors.push(`Skipped SKU ${sku}: please add proper location`);
                 results.failedRows.push({ ...row, "Error Reason": 'please add proper location' });
                 continue;
             }
 
-            // Determine which location to use
+
             let targetLocationId = locationId;
             let targetLocationName = selectedLocationName;
 
             if (isAllLocationsMode) {
-                // Find the location in our store (case-insensitive)
+
                 const foundLocation = allLocations.find(loc => loc.name.toLowerCase() === sheetLocation.toLowerCase());
                 if (!foundLocation) {
                     results.errors.push(`Skipped SKU ${sku}: Location '${sheetLocation}' not found in store`);
@@ -140,7 +140,7 @@ export const action = async ({ request }) => {
                 targetLocationId = foundLocation.id;
                 targetLocationName = foundLocation.name;
             } else {
-                // Single location mode - validate if location matches (case-insensitive)
+
                 if (sheetLocation.toLowerCase() !== selectedLocationName.toLowerCase()) {
                     results.errors.push(`Skipped SKU ${sku}: Location in sheet '${sheetLocation}' does not match selected location '${selectedLocationName}'`);
                     results.failedRows.push({ ...row, "Error Reason": `Location mismatch: '${sheetLocation}' ≠ '${selectedLocationName}'` });
@@ -148,7 +148,7 @@ export const action = async ({ request }) => {
                 }
             }
 
-            // Check for duplicate SKU+Location combination
+
             const combinationKey = `${sku}|${targetLocationName}`;
             if (processedCombinations.has(combinationKey)) {
                 results.errors.push(`Skipped SKU ${sku}: You have identical row having same SKU and location`);
@@ -157,7 +157,7 @@ export const action = async ({ request }) => {
             }
             processedCombinations.add(combinationKey);
 
-            // Find variant by SKU
+
             const variantQuery = await admin.graphql(
                 `#graphql
                 query findVariantBySKU($query: String!) {
@@ -202,7 +202,7 @@ export const action = async ({ request }) => {
                 continue;
             }
 
-            // Find current quantity at the target location
+
             let currentQuantity = 0;
             let locationFound = false;
             const inventoryLevels = variant.inventoryItem.inventoryLevels?.edges || [];
@@ -215,20 +215,20 @@ export const action = async ({ request }) => {
                 }
             }
 
-            // Validate that the location exists for this SKU
+
             if (!locationFound) {
                 results.errors.push(`Skipped SKU ${sku}: SKU don't have this location`);
                 results.failedRows.push({ ...row, "Error Reason": `SKU don't have this location` });
                 continue;
             }
 
-            // Skip if quantity is already the same
+
             if (currentQuantity === quantity) {
                 results.skippedRows.push({ ...row, "Reason": 'Quantity already matches' });
                 continue;
             }
 
-            // Update inventory quantity at the selected location
+
             const updateMutation = await admin.graphql(
                 `#graphql
                 mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {
@@ -290,11 +290,11 @@ export default function ImportProductData() {
     const [isProgressVisible, setIsProgressVisible] = useState(false);
     const fileInputRef = useRef(null);
 
-    // Pagination state for Failed Rows
+
     const [failedPage, setFailedPage] = useState(1);
     const failedRowsPerPage = 10;
 
-    // Pagination state for Skipped Rows
+
     const [skippedPage, setSkippedPage] = useState(1);
     const skippedRowsPerPage = 10;
 
@@ -302,7 +302,7 @@ export default function ImportProductData() {
     const locations = loaderFetcher.data?.locations || [];
 
     useEffect(() => {
-        // Load locations on mount
+
         loaderFetcher.load("/app/import-product-data");
     }, []);
 
@@ -312,42 +312,42 @@ export default function ImportProductData() {
             setProgress(0);
 
             const rowCount = parsedData ? parsedData.length : 0;
-            // Conservative estimate: 500ms per row, minimum 2 seconds
+
             const estimatedTimeMs = Math.max(rowCount * 500, 2000);
             const intervalMs = 100;
 
-            // Calculate increment to reach 90% in estimatedTimeMs
+
             const totalSteps = estimatedTimeMs / intervalMs;
             const linearIncrement = 90 / totalSteps;
 
             const interval = setInterval(() => {
                 setProgress((prev) => {
                     if (prev < 90) {
-                        // Phase 1: Linear
+
                         return Math.min(prev + linearIncrement, 90);
                     } else {
-                        // Phase 2: Asymptotic crawl to 99%
+
                         const target = 99;
                         const remaining = target - prev;
-                        // Move very slowly: 1% of remaining distance or 0.01 minimum
+
                         return prev + Math.max(remaining * 0.01, 0.01);
                     }
                 });
             }, intervalMs);
             return () => clearInterval(interval);
         } else if (isProgressVisible && !isLoading) {
-            // When loading finishes, jump to 100%
+
             setProgress(100);
         }
     }, [isLoading, isProgressVisible, parsedData]);
 
-    // Hide progress bar only after results are ready to display
+
     useEffect(() => {
         if (!isLoading && fetcher.data?.results && isProgressVisible) {
-            // Results are ready, hide progress bar after a brief moment
+
             const timeout = setTimeout(() => {
                 setIsProgressVisible(false);
-            }, 300); // Brief delay to show 100% completion
+            }, 300);
             return () => clearTimeout(timeout);
         }
     }, [isLoading, fetcher.data?.results, isProgressVisible]);
@@ -359,7 +359,7 @@ export default function ImportProductData() {
             setFailedPage(1);
             setSkippedPage(1);
 
-            // Parse the Excel file using ExcelJS
+
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const buffer = event.target.result;
@@ -369,15 +369,15 @@ export default function ImportProductData() {
                 const worksheet = workbook.worksheets[0];
                 const jsonData = [];
 
-                // Get headers from first row
+
                 const headers = [];
                 worksheet.getRow(1).eachCell((cell, colNumber) => {
                     headers[colNumber] = cell.value;
                 });
 
-                // Convert rows to JSON objects
+
                 worksheet.eachRow((row, rowNumber) => {
-                    if (rowNumber > 1) { // Skip header row
+                    if (rowNumber > 1) {
                         const rowData = {};
                         row.eachCell((cell, colNumber) => {
                             if (headers[colNumber]) {
@@ -390,13 +390,13 @@ export default function ImportProductData() {
 
                 setParsedData(jsonData);
 
-                // Check if location is selected
+
                 if (!selectedLocation) {
                     shopify.toast.show("Please select a location first");
                     return;
                 }
 
-                // Auto-import after parsing
+
                 shopify.toast.show(`File loaded: ${jsonData.length} rows. Starting import...`);
                 fetcher.submit(
                     {
@@ -416,7 +416,7 @@ export default function ImportProductData() {
             return;
         }
 
-        // Trigger the hidden file input
+
         if (fileInputRef.current) {
             fileInputRef.current.click();
         }
@@ -428,7 +428,7 @@ export default function ImportProductData() {
             const { results } = fetcher.data;
             shopify.toast.show(`Import complete: ${results.updated} updated, ${results.errors.length} errors`);
 
-            // Reset file input
+
             setFile(null);
             setParsedData(null);
             if (fileInputRef.current) {
