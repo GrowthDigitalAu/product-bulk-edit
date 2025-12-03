@@ -283,7 +283,7 @@ export default function ImportProductData() {
     const loaderFetcher = useFetcher();
     const [file, setFile] = useState(null);
     const [parsedData, setParsedData] = useState(null);
-    const [selectedLocation, setSelectedLocation] = useState("ALL_LOCATIONS");
+    const [selectedLocation, setSelectedLocation] = useState("SELECT_LOCATION");
     const [progress, setProgress] = useState(0);
     const [isProgressVisible, setIsProgressVisible] = useState(false);
     const fileInputRef = useRef(null);
@@ -447,6 +447,7 @@ export default function ImportProductData() {
                         value={selectedLocation}
                         onChange={(e) => setSelectedLocation(e.target.value)}
                     >
+                        <s-option value="SELECT_LOCATION" disabled>- Select -</s-option>
                         <s-option value="ALL_LOCATIONS">All Locations</s-option>
                         {locations.map((location) => (
                             <s-option key={location.id} value={location.id}>
@@ -467,7 +468,7 @@ export default function ImportProductData() {
                         variant="primary"
                         onClick={handleButtonClick}
                         loading={isLoading ? "true" : undefined}
-                        disabled={!selectedLocation ? "disabled" : undefined}
+                        disabled={!selectedLocation || selectedLocation === "SELECT_LOCATION" ? "disabled" : undefined}
                         paddingBlock="large"
                     >
                         Import Products

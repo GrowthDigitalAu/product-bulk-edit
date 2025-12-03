@@ -109,13 +109,13 @@ export const action = async ({ request }) => {
             const inventoryEdges = variant.inventoryItem?.inventoryLevels?.edges || [];
 
 
-            const filteredInventory = locationId
+            const filteredInventory = (locationId && locationId !== "ALL_LOCATIONS")
                 ? inventoryEdges.filter(edge => edge.node.location.id === locationId)
                 : inventoryEdges;
 
             if (filteredInventory.length === 0) {
 
-                if (!locationId) {
+                if (!locationId || locationId === "ALL_LOCATIONS") {
                     rows.push({
                         "Product Title": product.title,
                         "SKU": variant.sku || "",
@@ -162,7 +162,7 @@ export default function ExportProductData() {
     const shopify = useAppBridge();
     const fetcher = useFetcher();
     const loaderFetcher = useFetcher();
-    const [selectedLocation, setSelectedLocation] = useState("");
+    const [selectedLocation, setSelectedLocation] = useState("SELECT_LOCATION");
     const [progress, setProgress] = useState(0);
     const [isProgressVisible, setIsProgressVisible] = useState(false);
 
@@ -256,7 +256,8 @@ export default function ExportProductData() {
                         value={selectedLocation}
                         onChange={(e) => setSelectedLocation(e.target.value)}
                     >
-                        <s-option value="">All Locations</s-option>
+                        <s-option value="SELECT_LOCATION" disabled>- Select -</s-option>
+                        <s-option value="ALL_LOCATIONS">All Locations</s-option>
                         {locations.map((location) => (
                             <s-option key={location.id} value={location.id}>
                                 {location.name}
@@ -267,6 +268,7 @@ export default function ExportProductData() {
                         variant="primary"
                         onClick={handleExport}
                         loading={isLoading ? "true" : undefined}
+                        disabled={!selectedLocation || selectedLocation === "SELECT_LOCATION" ? "disabled" : undefined}
                         paddingBlock="large"
                     >
                         Export Product Data
