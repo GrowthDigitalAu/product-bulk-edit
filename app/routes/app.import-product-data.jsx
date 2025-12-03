@@ -117,18 +117,15 @@ export const action = async ({ request }) => {
             const sheetLocationRaw = row["Inventory Location"];
             const sheetLocation = sheetLocationRaw ? String(sheetLocationRaw).trim() : "";
 
-
-            if (!sheetLocation) {
-                results.errors.push(`Skipped SKU ${sku}: please add proper location`);
-                results.failedRows.push({ ...row, "Error Reason": 'please add proper location' });
-                continue;
-            }
-
-
             let targetLocationId = locationId;
             let targetLocationName = selectedLocationName;
 
             if (isAllLocationsMode) {
+                if (!sheetLocation) {
+                    results.errors.push(`Skipped SKU ${sku}: Inventory Location is required when "All Locations" is selected`);
+                    results.failedRows.push({ ...row, "Error Reason": 'Inventory Location is required for All Locations mode' });
+                    continue;
+                }
 
                 const foundLocation = allLocations.find(loc => loc.name.toLowerCase() === sheetLocation.toLowerCase());
                 if (!foundLocation) {
@@ -140,11 +137,12 @@ export const action = async ({ request }) => {
                 targetLocationId = foundLocation.id;
                 targetLocationName = foundLocation.name;
             } else {
-
-                if (sheetLocation.toLowerCase() !== selectedLocationName.toLowerCase()) {
-                    results.errors.push(`Skipped SKU ${sku}: Location in sheet '${sheetLocation}' does not match selected location '${selectedLocationName}'`);
-                    results.failedRows.push({ ...row, "Error Reason": `Location mismatch: '${sheetLocation}' ≠ '${selectedLocationName}'` });
-                    continue;
+                if (sheetLocation) {
+                    if (sheetLocation.toLowerCase() !== selectedLocationName.toLowerCase()) {
+                        results.errors.push(`Skipped SKU ${sku}: Location in sheet '${sheetLocation}' does not match selected location '${selectedLocationName}'`);
+                        results.failedRows.push({ ...row, "Error Reason": `Location mismatch: '${sheetLocation}' ≠ '${selectedLocationName}'` });
+                        continue;
+                    }
                 }
             }
 
@@ -384,7 +382,9 @@ export default function ImportProductData() {
                                 rowData[headers[colNumber]] = cell.value;
                             }
                         });
-                        jsonData.push(rowData);
+                        if (rowData["SKU"] && String(rowData["SKU"]).trim() !== "") {
+                            jsonData.push(rowData);
+                        }
                     }
                 });
 
@@ -441,7 +441,7 @@ export default function ImportProductData() {
         <s-page heading="Import Product Inventory Data">
             <s-box paddingBlockStart="large">
                 <s-section
-                    heading="Select a location and upload an Excel file with SKU, Quantity Available and Inventory Location columns. Other columns are optional.">
+                    heading="Select a location and upload an Excel file with SKU and Quantity Available columns. Other columns are optional.">
                     <s-select
                         label="Choose Location"
                         value={selectedLocation}
@@ -472,6 +472,16 @@ export default function ImportProductData() {
                     >
                         Import Products
                     </s-button>
+
+                    {selectedLocation === "ALL_LOCATIONS" && (
+                        <s-box paddingBlockStart="small-100">
+                            <s-banner tone="warning">
+                                <s-text as="p" tone="critical">
+                                    <strong>Inventory Location column is required for All Locations mode.</strong> Make sure your Excel file includes this column with valid location names.
+                                </s-text>
+                            </s-banner>
+                        </s-box>
+                    )}
                 </s-section>
             </s-box>
 
