@@ -53,6 +53,8 @@ export const action = async ({ request }) => {
                 node {
                   title
                   sku
+                  price
+                  compareAtPrice
                   selectedOptions {
                     name
                     value
@@ -122,6 +124,8 @@ export const action = async ({ request }) => {
                         "Option1 Value": options["Option1 Value"],
                         "Option2 Value": options["Option2 Value"],
                         "Option3 Value": options["Option3 Value"],
+                        "Price": variant.price || "",
+                        "CompareAt Price": variant.compareAtPrice || "",
                         "Inventory Location": "N/A",
                         "Quantity Available": 0
                     });
@@ -135,6 +139,8 @@ export const action = async ({ request }) => {
                         "Option1 Value": options["Option1 Value"],
                         "Option2 Value": options["Option2 Value"],
                         "Option3 Value": options["Option3 Value"],
+                        "Price": variant.price || "",
+                        "CompareAt Price": variant.compareAtPrice || "",
                         "Inventory Location": level.location.name,
                         "Quantity Available": level.quantities[0]?.quantity || 0
                     });
@@ -150,6 +156,8 @@ export const action = async ({ request }) => {
             "Option1 Value": "",
             "Option2 Value": "",
             "Option3 Value": "",
+            "Price": "",
+            "CompareAt Price": "",
             "Inventory Location": "",
             "Quantity Available": ""
         });
